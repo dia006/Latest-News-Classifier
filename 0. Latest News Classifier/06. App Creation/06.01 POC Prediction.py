@@ -16,7 +16,7 @@ import dash_table
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import re
-print("dash", dash.__version__, " dash_core_components", dcc.__version__, " dash_html_components", html.__version__)
+# print("dash", dash.__version__, " dash_core_components", dcc.__version__, " dash_html_components", html.__version__)
 
 import NewsScraping as ns
 
