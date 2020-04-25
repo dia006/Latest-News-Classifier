@@ -84,11 +84,8 @@ def create_features_from_df(df):
         regex_stopword = r"\b" + stop_word + r"\b"
         df['Content_Parsed_6'] = df['Content_Parsed_6'].str.replace(regex_stopword, '')
         
-    df = df['Content_Parsed_6']
-    df = df.rename(columns={'Content_Parsed_6': 'Content_Parsed'})
-    
     # TF-IDF
-    features = tfidf.transform(df).toarray()
+    features = tfidf.transform(df['Content_Parsed_6']).toarray()
     
     return features
 
@@ -125,7 +122,7 @@ def complete_df(df, categories):
     return df
 
 # Get the scraped dataframes
-df_features, df_show_info = ns.get_news_elpais()
+df_features, df_show_info = ns.get_news_theguardian()
 
 # Create features
 features = create_features_from_df(df_features)
@@ -135,3 +132,5 @@ predictions = predict_from_features(features)
 
 # Put into dataset
 df = complete_df(df_show_info, predictions)
+
+print(df)
