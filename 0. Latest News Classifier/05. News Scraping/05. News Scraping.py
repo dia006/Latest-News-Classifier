@@ -44,7 +44,7 @@ def get_news_elpais(number_of_articles = 5):
         for n in np.arange(0, number_of_articles):
 
             # Getting the link of the article
-            link = coverpage_news[n].find('a')['href']
+            link = url + coverpage_news[n].find('a')['href']
             list_links.append(link)
 
             # Getting the title
@@ -52,7 +52,7 @@ def get_news_elpais(number_of_articles = 5):
             list_titles.append(title)
 
             # Reading the content (it is divided in paragraphs)
-            article = requests.get(url + link)
+            article = requests.get(link)
             article_content = article.content
             soup_article = BeautifulSoup(article_content, 'html5lib')
             body = soup_article.find_all('div', class_='article_body')

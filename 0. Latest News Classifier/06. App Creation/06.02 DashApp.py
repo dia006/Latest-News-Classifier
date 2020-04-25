@@ -16,7 +16,9 @@ import dash_table
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import re
-print("dash", dash.__version__, " dash_core_components", dcc.__version__, " dash_html_components", html.__version__)
+
+import NewsScraping as ns
+import Utilities as uti
 
 # Stylesheet
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -52,59 +54,6 @@ Warning: The Mirror takes approximately 30 seconds to gather the news articles.
 Created by Miguel Fernández Zafra.
 '''
 
-punctuation_signs = list("?:!.,;")
-stop_words = list(stopwords.words('english'))
-
-def create_features_from_df(df):
-    
-    df['Content_Parsed_1'] = df['Content'].str.replace("\r", " ")
-    df['Content_Parsed_1'] = df['Content_Parsed_1'].str.replace("\n", " ")
-    df['Content_Parsed_1'] = df['Content_Parsed_1'].str.replace("    ", " ")
-    df['Content_Parsed_1'] = df['Content_Parsed_1'].str.replace('"', '')
-    
-    df['Content_Parsed_2'] = df['Content_Parsed_1'].str.lower()
-    
-    df['Content_Parsed_3'] = df['Content_Parsed_2']
-    for punct_sign in punctuation_signs:
-        df['Content_Parsed_3'] = df['Content_Parsed_3'].str.replace(punct_sign, '')
-        
-    df['Content_Parsed_4'] = df['Content_Parsed_3'].str.replace("'s", "")
-    
-    wordnet_lemmatizer = WordNetLemmatizer()
-    nrows = len(df)
-    lemmatized_text_list = []
-    for row in range(0, nrows):
-
-        # Create an empty list containing lemmatized words
-        lemmatized_list = []
-        # Save the text and its words into an object
-        text = df.loc[row]['Content_Parsed_4']
-        text_words = text.split(" ")
-        # Iterate through every word to lemmatize
-        for word in text_words:
-            lemmatized_list.append(wordnet_lemmatizer.lemmatize(word, pos="v"))
-        # Join the list
-        lemmatized_text = " ".join(lemmatized_list)
-        # Append to the list containing the texts
-        lemmatized_text_list.append(lemmatized_text)
-    
-    df['Content_Parsed_5'] = lemmatized_text_list
-    
-    df['Content_Parsed_6'] = df['Content_Parsed_5']
-    for stop_word in stop_words:
-        regex_stopword = r"\b" + stop_word + r"\b"
-        df['Content_Parsed_6'] = df['Content_Parsed_6'].str.replace(regex_stopword, '')
-        
-    df = df['Content_Parsed_6']
-    df = df.rename(columns={'Content_Parsed_6': 'Content_Parsed'})
-    
-    # TF-IDF
-    features = tfidf.transform(df).toarray()
-    
-    return features
-
-
-
 app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
     
     # Title
@@ -138,7 +87,8 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
             options=[
                 {'label': 'El Pais English', 'value': 'EPE'},
                 {'label': 'The Guardian', 'value': 'THG'},
-                {'label': 'The Mirror', 'value': 'TMI'}
+                {'label': 'The Mirror', 'value': 'TMI'},
+                {'label': 'Daily Mail', 'value': 'DMI'}
             ],
             value=['EPE', 'THG'],
             multi=True,
@@ -202,35 +152,43 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
 
 @app.callback(
     Output('intermediate-value', 'children'),
-    [],
-    [State('checklist', 'value')],
-    [dash.dependencies.Event('submit', 'click')])
-def scrape_and_predict(values):
+    [Input('submit', 'n_clicks')],
+    [State('checklist', 'value')]
+)
+def scrape_and_predict(n_clicks, values):
     
     df_features = pd.DataFrame()
     df_show_info = pd.DataFrame()
     
     if 'EPE' in values:
         # Get the scraped dataframes
-        df_features = df_features.append(get_news_elpais()[0])
-        df_show_info = df_show_info.append(get_news_elpais()[1])
+        d1, d2 = ns.get_news_elpais()
+        df_features = df_features.append(d1)
+        df_show_info = df_show_info.append(d2)
     
     if 'THG' in values:
-        df_features = df_features.append(get_news_theguardian()[0])
-        df_show_info = df_show_info.append(get_news_theguardian()[1])
+        d1, d2 = ns.get_news_theguardian()
+        df_features = df_features.append(d1)
+        df_show_info = df_show_info.append(d2)
         
     if 'TMI' in values:
-        df_features = df_features.append(get_news_themirror()[0])
-        df_show_info = df_show_info.append(get_news_themirror()[1])
+        d1, d2 = ns.get_news_themirror()
+        df_features = df_features.append(d1)
+        df_show_info = df_show_info.append(d2)
+
+    if 'DMI' in values:
+        d1, d2 = ns.get_news_dailymail()
+        df_features = df_features.append(d1)
+        df_show_info = df_show_info.append(d2)
 
     df_features = df_features.reset_index().drop('index', axis=1)
     
     # Create features
-    features = create_features_from_df(df_features)
+    features = uti.create_features_from_df(df_features)
     # Predict
-    predictions = predict_from_features(features)
+    predictions = uti.predict_from_features(features)
     # Put into dataset
-    df = complete_df(df_show_info, predictions)
+    df = uti.complete_df(df_show_info, predictions)
     # df.to_csv('Tableau Teaser/df_tableau.csv', sep='^')  # export to csv to work out an example in Tableau
     
     return df.to_json(date_format='iso', orient='split')
@@ -289,12 +247,28 @@ def update_barchart(jsonified_df):
         x_tmi = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
         y_tmi = [0,0,0,0,0,0]
 
+    if 'Daily Mail' in df_sum.index:
+    
+        df_sum_tmi = df_sum['Daily Mail']
+        x_tmi = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
+        y_tmi = [[df_sum_tmi['politics'] if 'politics' in df_sum_tmi.index else 0][0],
+                [df_sum_tmi['business'] if 'business' in df_sum_tmi.index else 0][0],
+                [df_sum_tmi['entertainment'] if 'entertainment' in df_sum_tmi.index else 0][0],
+                [df_sum_tmi['sport'] if 'sport' in df_sum_tmi.index else 0][0],
+                [df_sum_tmi['tech'] if 'tech' in df_sum_tmi.index else 0][0],
+                [df_sum_tmi['other'] if 'other' in df_sum_tmi.index else 0][0]]   
+
+    else:
+        x_tmi = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
+        y_tmi = [0,0,0,0,0,0]
+
     # Create plotly figure
     figure = {
         'data': [
             {'x': x_epe, 'y':y_epe, 'type': 'bar', 'name': 'El Pais'},
             {'x': x_thg, 'y':y_thg, 'type': 'bar', 'name': 'The Guardian'},
-            {'x': x_tmi, 'y':y_tmi, 'type': 'bar', 'name': 'The Mirror'}
+            {'x': x_tmi, 'y':y_tmi, 'type': 'bar', 'name': 'The Mirror'},
+            {'x': x_tmi, 'y':y_tmi, 'type': 'bar', 'name': 'Daily Mail'}
         ],
         'layout': {
             'title': 'Number of news articles by newspaper',
@@ -363,5 +337,4 @@ def update_table(jsonified_df):
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/brPBPO.css"})
 
-if(__name__ == "__main__"):
-    app.run_server(debug=False)
+app.run_server(debug=False)
