@@ -98,8 +98,12 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
 
     # Button
     html.Div([
+        dcc.Input(
+            id="input_maxnews",
+            type="number",
+            placeholder="Max number of news"),
         html.Button('Submit', id='submit', type='submit')],
-        style={'float': 'center'}),
+        style={}),
     
     # Output Block
     html.Div(id='output-container-button', children=' '),
@@ -153,31 +157,34 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
 @app.callback(
     Output('intermediate-value', 'children'),
     [Input('submit', 'n_clicks')],
-    [State('checklist', 'value')]
+    [State('checklist', 'value'), State('input_maxnews', 'value')]
 )
-def scrape_and_predict(n_clicks, values):
+def scrape_and_predict(n_clicks, values, max_news):
     
     df_features = pd.DataFrame()
     df_show_info = pd.DataFrame()
+
+    if(max_news is None or max_news < 5):
+        max_news = 5
     
     if 'EPE' in values:
         # Get the scraped dataframes
-        d1, d2 = ns.get_news_elpais()
+        d1, d2 = ns.get_news_elpais(max_news)
         df_features = df_features.append(d1)
         df_show_info = df_show_info.append(d2)
     
     if 'THG' in values:
-        d1, d2 = ns.get_news_theguardian()
+        d1, d2 = ns.get_news_theguardian(max_news)
         df_features = df_features.append(d1)
         df_show_info = df_show_info.append(d2)
         
     if 'TMI' in values:
-        d1, d2 = ns.get_news_themirror()
+        d1, d2 = ns.get_news_themirror(max_news)
         df_features = df_features.append(d1)
         df_show_info = df_show_info.append(d2)
 
     if 'DMI' in values:
-        d1, d2 = ns.get_news_dailymail()
+        d1, d2 = ns.get_news_dailymail(max_news)
         df_features = df_features.append(d1)
         df_show_info = df_show_info.append(d2)
 
@@ -249,18 +256,18 @@ def update_barchart(jsonified_df):
 
     if 'Daily Mail' in df_sum.index:
     
-        df_sum_tmi = df_sum['Daily Mail']
-        x_tmi = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
-        y_tmi = [[df_sum_tmi['politics'] if 'politics' in df_sum_tmi.index else 0][0],
-                [df_sum_tmi['business'] if 'business' in df_sum_tmi.index else 0][0],
-                [df_sum_tmi['entertainment'] if 'entertainment' in df_sum_tmi.index else 0][0],
-                [df_sum_tmi['sport'] if 'sport' in df_sum_tmi.index else 0][0],
-                [df_sum_tmi['tech'] if 'tech' in df_sum_tmi.index else 0][0],
-                [df_sum_tmi['other'] if 'other' in df_sum_tmi.index else 0][0]]   
+        df_sum_dm = df_sum['Daily Mail']
+        x_dm = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
+        y_dm = [[df_sum_dm['politics'] if 'politics' in df_sum_dm.index else 0][0],
+                [df_sum_dm['business'] if 'business' in df_sum_dm.index else 0][0],
+                [df_sum_dm['entertainment'] if 'entertainment' in df_sum_dm.index else 0][0],
+                [df_sum_dm['sport'] if 'sport' in df_sum_dm.index else 0][0],
+                [df_sum_dm['tech'] if 'tech' in df_sum_dm.index else 0][0],
+                [df_sum_dm['other'] if 'other' in df_sum_dm.index else 0][0]]   
 
     else:
-        x_tmi = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
-        y_tmi = [0,0,0,0,0,0]
+        x_dm = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
+        y_dm = [0,0,0,0,0,0]
 
     # Create plotly figure
     figure = {
@@ -268,7 +275,7 @@ def update_barchart(jsonified_df):
             {'x': x_epe, 'y':y_epe, 'type': 'bar', 'name': 'El Pais'},
             {'x': x_thg, 'y':y_thg, 'type': 'bar', 'name': 'The Guardian'},
             {'x': x_tmi, 'y':y_tmi, 'type': 'bar', 'name': 'The Mirror'},
-            {'x': x_tmi, 'y':y_tmi, 'type': 'bar', 'name': 'Daily Mail'}
+            {'x': x_dm, 'y':y_dm, 'type': 'bar', 'name': 'Daily Mail'}
         ],
         'layout': {
             'title': 'Number of news articles by newspaper',
