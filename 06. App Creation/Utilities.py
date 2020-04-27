@@ -114,5 +114,11 @@ def predict_from_features(features):
     return categories
 
 def complete_df(df, categories):
-    df['Prediction'] = categories
+    try:
+        df['Prediction'] = categories
+    except Exception as ex:
+        print("Exception", ex, len(df), len(categories))
+    finally:
+        df['Prediction'] = "other"
+
     return df

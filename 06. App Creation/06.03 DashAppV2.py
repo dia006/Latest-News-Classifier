@@ -129,7 +129,7 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
                                            'border': 'None'})],
                         style={'textAlign': 'center',
                                'padding': '20px',
-                               "margin-bottom": "0px",
+                               "margin-bottom": "10px",
                                'color': colors['titles']}),
             
                     dcc.Loading(id="loading-1", children=[html.Div(id="loading-output-1")], type="circle"),
@@ -222,8 +222,6 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
     
     # Hidden div inside the app that stores the intermediate value
     html.Div(id='intermediate-value', style={'display': 'none'})
-    
-
 ])
 
 
