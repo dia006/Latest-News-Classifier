@@ -88,9 +88,10 @@ app.layout = html.Div(style={'backgroundColor':colors['background']}, children=[
                 {'label': 'El Pais English', 'value': 'EPE'},
                 {'label': 'The Guardian', 'value': 'THG'},
                 {'label': 'The Mirror', 'value': 'TMI'},
-                {'label': 'Daily Mail', 'value': 'DMI'}
+                {'label': 'Daily Mail', 'value': 'DMI'},
+                {'label': 'Sky News', 'value': 'SKN'}
             ],
-            value=['EPE', 'THG'],
+            value=['EPE', 'THG', 'TMI', 'DMI', 'SKN'],
             multi=True,
             id='checklist')],
         style={'width': '40%', 'display': 'inline-block', 'float': 'left'}),
@@ -188,6 +189,11 @@ def scrape_and_predict(n_clicks, values, max_news):
         df_features = df_features.append(d1)
         df_show_info = df_show_info.append(d2)
 
+    if 'SKN' in values:
+        d1, d2 = ns.get_news_skynews(max_news)
+        df_features = df_features.append(d1)
+        df_show_info = df_show_info.append(d2)
+
     df_features = df_features.reset_index().drop('index', axis=1)
     
     # Create features
@@ -269,13 +275,29 @@ def update_barchart(jsonified_df):
         x_dm = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
         y_dm = [0,0,0,0,0,0]
 
+    if 'Sky News' in df_sum.index:
+    
+        df_sum_skn = df_sum['Sky News']
+        x_skn = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
+        y_skn = [[df_sum_skn['politics'] if 'politics' in df_sum_skn.index else 0][0],
+                [df_sum_skn['business'] if 'business' in df_sum_skn.index else 0][0],
+                [df_sum_skn['entertainment'] if 'entertainment' in df_sum_skn.index else 0][0],
+                [df_sum_skn['sport'] if 'sport' in df_sum_skn.index else 0][0],
+                [df_sum_skn['tech'] if 'tech' in df_sum_skn.index else 0][0],
+                [df_sum_skn['other'] if 'other' in df_sum_skn.index else 0][0]]   
+
+    else:
+        x_skn = ['Politics', 'Business', 'Entertainment', 'Sport', 'Tech', 'Other']
+        y_skn = [0,0,0,0,0,0]
+
     # Create plotly figure
     figure = {
         'data': [
             {'x': x_epe, 'y':y_epe, 'type': 'bar', 'name': 'El Pais'},
             {'x': x_thg, 'y':y_thg, 'type': 'bar', 'name': 'The Guardian'},
             {'x': x_tmi, 'y':y_tmi, 'type': 'bar', 'name': 'The Mirror'},
-            {'x': x_dm, 'y':y_dm, 'type': 'bar', 'name': 'Daily Mail'}
+            {'x': x_dm, 'y':y_dm, 'type': 'bar', 'name': 'Daily Mail'},
+            {'x': x_skn, 'y':y_skn, 'type': 'bar', 'name': 'Sky News'}
         ],
         'layout': {
             'title': 'Number of news articles by newspaper',

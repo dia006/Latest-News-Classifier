@@ -1,4 +1,4 @@
-import requests
+import mechanize
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
@@ -15,21 +15,23 @@ import time
 # - A dataframe with the news content (input)
 # - A dataframe with the article title, link and predicted category
 
-def get_url(url):
+def get_url(url, retries=0):
     """
-    It get the url with a delay and retry if status code returned not 200
+    It get the url with a delay and retry if status code returned not 200.
+    Default is no retry
     """
-    r1 = requests.get(url)
-    max = 3
+    # It seems mechanize is more slow but more reliable than requests so I changed
+    # to this one as it act as a browser
+    r1 = mechanize.urlopen(url)
     i = 1
-    while(r1.status_code != 200):
-        print("{} - status code {} - Wait {} seconds & Retry".format(url, r1.status_code, i))
+    while(r1.code != 200 and i < retries):
+        print("{} - status code {} - Wait {} seconds & Retry".format(url, r1.code, i))
         time.sleep(i)
-        r1 = requests.get(url)
-        if(i < max):
+        r1 = mechanize.urlopen(url)
+        if(i < retries):
             i = i + 1
         else:
-            print("{} - status code {} - Too many retries, abandon!".format(url, r1.status_code, i))
+            print("{} - status code {} - Too many retries, abandon!".format(url, r1.code, i))
             break
     return(r1)
 
@@ -42,7 +44,7 @@ def get_news_elpais(number_of_articles = 5):
     r1 = get_url(url)
 
     # We'll save in coverpage the cover page content
-    coverpage = r1.content
+    coverpage = r1.read()
 
     # Soup creation
     soup1 = BeautifulSoup(coverpage, 'html5lib')
@@ -61,7 +63,7 @@ def get_news_elpais(number_of_articles = 5):
         link = url + coverpage_news[n].find('a')['href']
         article = get_url(link)
         # If article fetched
-        if(article.status_code==200):
+        if(article.code==200):
             list_links.append(link)
 
             # Getting the title
@@ -69,7 +71,7 @@ def get_news_elpais(number_of_articles = 5):
             list_titles.append(title)
 
             # Reading the content (it is divided in paragraphs)
-            article_content = article.content
+            article_content = article.read()
             soup_article = BeautifulSoup(article_content, 'html5lib')
             body = soup_article.find_all('div', class_='article_body')
             x = body[0].find_all('p')
@@ -97,7 +99,7 @@ def get_news_theguardian(number_of_articles = 5):
     r1 = get_url(url)
 
     # We'll save in coverpage the cover page content
-    coverpage = r1.content
+    coverpage = r1.read()
 
     # Soup creation
     soup1 = BeautifulSoup(coverpage, 'html5lib')
@@ -116,7 +118,7 @@ def get_news_theguardian(number_of_articles = 5):
         link = coverpage_news[n]['href']
         article = get_url(link)
         # If article fetched
-        if(article.status_code==200):
+        if(article.code==200):
             list_links.append(link)
 
             # Getting the title
@@ -124,7 +126,7 @@ def get_news_theguardian(number_of_articles = 5):
             list_titles.append(title)
 
             # Reading the content (it is divided in paragraphs)
-            article_content = article.content
+            article_content = article.read()
             soup_article = BeautifulSoup(article_content, 'html5lib')
             body = soup_article.find_all('div', class_='content__article-body')
             if(len(body) > 0):
@@ -153,7 +155,7 @@ def get_news_dailymail(number_of_articles = 5):
     r1 = get_url(url)
 
     # We'll save in coverpage the cover page content
-    coverpage = r1.content
+    coverpage = r1.read()
 
     # Soup creation
     soup1 = BeautifulSoup(coverpage, 'html5lib')
@@ -172,7 +174,7 @@ def get_news_dailymail(number_of_articles = 5):
         link = url + coverpage_news[n].find('a')['href']
         article = get_url(link)
         # If article fetched
-        if(article.status_code==200):
+        if(article.code==200):
             list_links.append(link)
 
             # Getting the title
@@ -180,7 +182,7 @@ def get_news_dailymail(number_of_articles = 5):
             list_titles.append(title)
 
             # Reading the content (it is divided in paragraphs)
-            article_content = article.content
+            article_content = article.read()
             soup_article = BeautifulSoup(article_content, 'html5lib')
             body = soup_article.find_all('p', class_='mol-para-with-font')
 
@@ -211,7 +213,7 @@ def get_news_themirror(number_of_articles = 5):
     r1 = get_url(url)
 
     # We'll save in coverpage the cover page content
-    coverpage = r1.content
+    coverpage = r1.read()
 
     # Soup creation
     soup1 = BeautifulSoup(coverpage, 'html5lib')
@@ -230,7 +232,7 @@ def get_news_themirror(number_of_articles = 5):
         link = coverpage_news[n]['href']
         article = get_url(link)
         # If article fetched
-        if(article.status_code==200):
+        if(article.code==200):
             list_links.append(link)
 
             # Getting the title
@@ -239,7 +241,7 @@ def get_news_themirror(number_of_articles = 5):
 
             # Reading the content (it is divided in paragraphs)
             article = get_url(link)
-            article_content = article.content
+            article_content = article.read()
             soup_article = BeautifulSoup(article_content, 'html5lib')
             body = soup_article.find_all('div', class_='article-body')
             x = soup_article.find_all('p')
@@ -258,16 +260,85 @@ def get_news_themirror(number_of_articles = 5):
     
     return (df_features, df_show_info)
 
+# Sky News
+def get_news_skynews(number_of_articles = 5):
+    
+    # url definition
+    url = "https://news.sky.com/us"
+
+    # Request
+    r1 = get_url(url)
+
+    # We'll save in coverpage the cover page content
+    coverpage = r1.read()
+
+    # Soup creation
+    soup1 = BeautifulSoup(coverpage, 'html5lib')
+
+    # News identification
+    coverpage_news = soup1.find_all('h3', class_="sdc-site-tile__headline")
+
+    # Empty lists for content, links and titles
+    news_contents = []
+    list_links = []
+    list_titles = []
+
+    for n in np.arange(0, min(len(coverpage_news), number_of_articles)):
+
+        # Getting the link of the article
+        link = "https://news.sky.com" + coverpage_news[n].find('a', class_='sdc-site-tile__headline-link')['href']
+        article = get_url(link)
+        # If article fetched
+        if(article.code==200):
+            # If video url discard it, this will lead to a lower number of news
+            if("/video/" in link):
+                continue
+
+            list_links.append(link)
+
+            # Getting the title
+            title = coverpage_news[n].find('a').find('span').get_text()
+            list_titles.append(title)
+
+            # Reading the content (it is divided in paragraphs)
+            article_content = article.read()
+            soup_article = BeautifulSoup(article_content, 'html5lib')
+            body = soup_article.find_all('div', class_='sdc-article-body')
+            x = body[0].find_all('p')
+
+            # Unifying the paragraphs
+            list_paragraphs = [o.get_text() for o in x]
+            final_article = " ".join(list_paragraphs)
+
+            news_contents.append(final_article)
+
+    # df_features
+    df_features = pd.DataFrame({'Content': news_contents})
+
+    # df_show_info
+    df_show_info = pd.DataFrame({'Article Title': list_titles, 'Article Link': list_links, 'Newspaper': 'Sky News'})
+    
+    return (df_features, df_show_info)
+
 if(__name__ == "__main__"):
     start = time.time()
 
     max_news = 10
 
     d_ElPaysFeatures, d_ElPaysInfo = get_news_elpais(max_news)
+    print("El Pays", len(d_ElPaysFeatures), "on", max_news)
+
     d_GuardianFeatures, d_GuardianInfo = get_news_theguardian(max_news)
+    print("The Guardian", len(d_GuardianFeatures), "on", max_news)
+
     d_DailyMailFeatures, d_DailyMailInfo = get_news_dailymail(max_news)
+    print("Daily Mail", len(d_DailyMailFeatures), "on", max_news)
+
     d_TheMirrorFeatures, d_TheMirrorInfo = get_news_themirror(max_news)
-    print(len(d_ElPaysFeatures), len(d_GuardianFeatures), len(d_DailyMailFeatures), len(d_TheMirrorFeatures))
+    print("The Mirror", len(d_TheMirrorFeatures), "on", max_news)
+
+    d_SkyNewsFeatures, d_SkyNewsInfo = get_news_skynews(max_news)
+    print("Sky News", len(d_SkyNewsFeatures), "on", max_news)
 
     print("The time elapsed is %f seconds" %(time.time()-start))
 

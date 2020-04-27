@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 
-sRootPath = "./0. Latest News Classifier/00. Raw dataset/BBC/bbc-fulltext/bbc"
-sOutput = "./0. Latest News Classifier/01. Dataset Creation/News_dataset_py.csv"
+sRootPath = "./00. Raw dataset/BBC/bbc-fulltext/bbc"
+sOutput = "./01. Dataset Creation/News_dataset_py.csv"
 
 aColumns = ["File_name", "Content", "Category", "Complete_Filename"]
 aRows = []

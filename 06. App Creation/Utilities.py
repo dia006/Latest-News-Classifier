@@ -16,14 +16,14 @@ import dash_table
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 
-path_models = "./0. Latest News Classifier/04. Model Training/Models/"
+path_models = "./04. Model Training/Models/"
 
 # SVM
 path_svm = path_models + 'best_svc.pickle'
 with open(path_svm, 'rb') as data:
     svc_model = pickle.load(data)
 
-path_tfidf = "./0. Latest News Classifier/03. Feature Engineering/Pickles/tfidf.pickle"
+path_tfidf = "./03. Feature Engineering/Pickles/tfidf.pickle"
 
 with open(path_tfidf, 'rb') as data:
     tfidf = pickle.load(data)
